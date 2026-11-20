@@ -1,0 +1,10 @@
+<?php
+require_once __DIR__.'/config/config.php';
+require_login();
+$id=(int)($_GET['id']??0);
+$s=db()->prepare("SELECT o.*,b.business_name,b.contact_person,b.address,b.contact_number FROM orders o JOIN buyers b ON b.buyer_id=o.buyer_id WHERE o.order_id=?");
+$s->execute([$id]);$o=$s->fetch();
+if(!$o || (role()==='Buyer' && (int)$o['buyer_id']!==(int)($_SESSION['user']['buyer_id']??0))){http_response_code(404);exit('Order not found.');}
+$it=db()->prepare("SELECT oi.quantity,g.grain_name,g.unit FROM order_items oi JOIN grain_types g ON g.grain_id=oi.grain_id WHERE oi.order_id=?");$it->execute([$id]);
+?>
+<!doctype html><html><head><meta charset="utf-8"><title>Order <?=e($o['order_reference'])?></title><link rel="stylesheet" href="assets/style.css"></head><body class="print-body"><div class="print-sheet"><div class="print-head"><div class="brand-icon">SG</div><div><h1>SGC COOPERATIVE</h1><p>GRAIN ORDER CONFIRMATION</p></div></div><hr><h2>Order Confirmation</h2><div class="print-grid"><p><b>Reference:</b><br><?=e($o['order_reference'])?></p><p><b>Date:</b><br><?=e($o['order_date'])?></p><p><b>Buyer:</b><br><?=e($o['business_name'])?></p><p><b>Contact person:</b><br><?=e($o['contact_person'])?></p><p><b>Contact number:</b><br><?=e($o['contact_number'])?></p><p><b>Status:</b><br><?=e($o['status'])?></p></div><table><thead><tr><th>Grain type</th><th>Quantity</th></tr></thead><tbody><?php foreach($it as $r): ?><tr><td><?=e($r['grain_name'])?></td><td><?=number_format((float)$r['quantity'],2)?> <?=e($r['unit'])?></td></tr><?php endforeach; ?></tbody></table><p class="muted">This document confirms the order details recorded in the SGC Cooperative system. An order is considered confirmed only when its status is Approved.</p><div class="signatures"><div>________________________<br>Authorized representative</div><div>________________________<br>Buyer acknowledgement</div></div><button class="btn primary no-print" onclick="window.print()">Print confirmation</button><p class="muted no-print"><a href="index.php?page=orders">Return to orders</a></p></div></body></html>
